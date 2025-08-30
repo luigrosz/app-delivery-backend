@@ -25,7 +25,7 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
         status: 'completo',
         forma_pagamento: 'credito',
         valor: 4500,
-        taxa: 300
+        taxa: 1350,
       }}
     }
     #swagger.responses[400] = {

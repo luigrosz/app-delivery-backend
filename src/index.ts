@@ -9,18 +9,8 @@ import swagger from './swagger/router'
 const app = express();
 const PORT = 3001;
 
-const allowedOrigins = [
-  'http://localhost:5173'
-];
-
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: '*',
   credentials: true
 }));
 

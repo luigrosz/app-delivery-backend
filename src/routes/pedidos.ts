@@ -41,7 +41,7 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
           status: 'pedido_esperando_ser_aceito',
           forma_pagamento: 'pix',
           valor: 8500,
-          taxa: 300
+          taxa: 2550
         }
       }
     }
