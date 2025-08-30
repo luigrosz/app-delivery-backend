@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 
 const router = Router();
 
-router.post('/', async (req: Request, res: Response): Promise<any> => {
+router.post('/pagamento', async (req: Request, res: Response): Promise<any> => {
   const { username, password } = req.body;
 
   try {
@@ -24,8 +24,7 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
     return res.status(200).json({ message: 'Login successful', user: { id: user.id_usuario, username: user.usuario, is_restaurante: user.is_restaurante } });
 
   } catch (e) {
-    console.error('Error during login:', e);
-    return res.status(500).json({ message: 'Internal server error during login' });
+    return res.status(500).json({ message: 'Internal server error' });
   }
 });
 
