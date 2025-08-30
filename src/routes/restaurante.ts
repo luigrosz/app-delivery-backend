@@ -143,7 +143,7 @@ router.post('/prato', async (req: Request, res: Response): Promise<any> => {
 
     const result = await pool.query(
       'INSERT INTO Lista_de_Pratos (id_restaurante, nome, descricao, valor, estoque, id_categoria) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [id_restaurante, nome, descricao, valor * 100, estoque, id_categoria]
+      [id_restaurante, nome, descricao, valor, estoque, id_categoria]
     );
 
     return res.status(201).json(result.rows[0]);
