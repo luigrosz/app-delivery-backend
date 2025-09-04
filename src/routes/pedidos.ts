@@ -129,4 +129,166 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
+router.patch('/:id', async (req: Request, res: Response): Promise<any> => {
+  /*
+    #swagger.tags = ['Pedidos']
+    #swagger.summary = 'Atualiza o status de um pedido existente.'
+    #swagger.parameters['id'] = {
+      in: 'path',
+      description: 'ID do pedido a ser atualizado.',
+      required: true,
+      type: 'integer'
+    }
+    #swagger.parameters['body'] = {
+      in: 'body',
+      description: 'Novo status do pedido.',
+      required: true,
+      schema: {
+        $status: 'pedido_aceito'
+      }
+    }
+    #swagger.responses[200] = {
+      description: 'Pedido atualizado com sucesso.',
+      schema: {
+        message: 'Status do pedido atualizado com sucesso',
+        pedido: {
+          id_pedido: 5,
+          id_cliente: 1,
+          id_restaurante: 1,
+          data_pedido: '2024-01-01T10:00:00.000Z',
+          status: 'em_preparacao',
+          forma_pagamento: 'pix',
+          valor: 8500,
+          taxa: 2550
+        }
+      }
+    }
+    #swagger.responses[400] = {
+      description: 'Dados inválidos ou incompletos.',
+      schema: { message: 'Status do pedido inválido.' }
+    }
+    #swagger.responses[404] = {
+      description: 'Pedido não encontrado.',
+      schema: { message: 'Pedido com ID X não encontrado.' }
+    }
+    #swagger.responses[500] = {
+      description: 'Erro interno do servidor durante a atualização do pedido.',
+      schema: { message: 'Internal server error during order update' }
+    }
+  */
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!status) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'O status do pedido deve ser fornecido.' });
+    }
+
+    const validOrderStatuses = [
+      'completo',
+      'em_preparacao',
+      'a_caminho',
+      'pedido_esperando_ser_aceito'
+    ];
+
+    if (!validOrderStatuses.includes(status)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'Status do pedido inválido.' });
+    }
+
+    const orderId = parseInt(id, 10);
+    if (isNaN(orderId)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'ID do pedido inválido.' });
+    }
+
+    const updateResult = await client.query(
+      'UPDATE Pedido SET status = $1, data_atualizacao = NOW() WHERE id_pedido = $2 RETURNING *',
+      [status, orderId]
+    );
+
+    if (updateResult.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: `Pedido com ID ${orderId} não encontrado.` });
+    }
+
+    await client.query('COMMIT');
+    return res.status(200).json({ message: 'Status do pedido atualizado com sucesso', pedido: updateResult.rows[0] });
+
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('Error updating order status:', e);
+    return res.status(500).json({ message: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+router.get('/restaurante/:id_restaurante', async (req: Request, res: Response): Promise<any> => {
+  /*
+    #swagger.tags = ['Pedidos']
+    #swagger.summary = 'Lista pedidos de um restaurante específico.'
+    #swagger.parameters['id_restaurante'] = {
+      in: 'path',
+      description: 'ID do restaurante para listar os pedidos.',
+      required: true,
+      type: 'integer'
+    }
+    #swagger.responses[200] = {
+      description: 'Lista de pedidos do restaurante.',
+      schema: [{
+        id_pedido: 1,
+        id_cliente: 1,
+        id_restaurante: 1,
+        data_pedido: '2024-01-01T10:00:00.000Z',
+        status: 'pedido_esperando_ser_aceito',
+        forma_pagamento: 'pix',
+        valor: 8500,
+        taxa: 2550
+      }]
+    }
+    #swagger.responses[400] = {
+      description: 'ID do restaurante inválido.',
+      schema: { message: 'ID do restaurante inválido.' }
+    }
+    #swagger.responses[404] = {
+      description: 'Nenhum pedido encontrado para o restaurante especificado.',
+      schema: { message: 'Nenhum pedido encontrado para o restaurante com ID X.' }
+    }
+    #swagger.responses[500] = {
+      description: 'Erro interno do servidor durante a listagem de pedidos.',
+      schema: { message: 'Internal server error during order listing' }
+    }
+  */
+  const { id_restaurante } = req.params;
+  const client = await pool.connect();
+
+  try {
+    const restaurantId = parseInt(id_restaurante, 10);
+    if (isNaN(restaurantId)) {
+      return res.status(400).json({ message: 'ID do restaurante inválido.' });
+    }
+
+    const result = await client.query(
+      'SELECT * FROM Pedido WHERE id_restaurante = $1 ORDER BY data_pedido DESC',
+      [restaurantId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: `Nenhum pedido encontrado para o restaurante com ID ${restaurantId}.` });
+    }
+
+    return res.status(200).json(result.rows);
+
+  } catch (e) {
+    return res.status(500).json({ message: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
 export default router;
